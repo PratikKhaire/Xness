@@ -1,1 +1,1 @@
-{"version":3,"file":"redisqueue.d.ts","sourceRoot":"","sources":["../src/redisqueue.ts"],"names":[],"mappings":"AAIA,wBAAsB,iBAAiB,CAAC,SAAS,SAAM,iBA0CtD"}
+{"version":3,"file":"redisqueue.d.ts","sourceRoot":"","sources":["../src/redisqueue.ts"],"names":[],"mappings":"AAIA,wBAAsB,iBAAiB,CACrC,SAAS,oBAAM,EACf,YAAY,EAAE,MAAM,EACpB,cAAc,EAAE,MAAM,iBAoDvB"}

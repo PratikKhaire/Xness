@@ -1,2 +1,2 @@
-export declare function popBatchFromQueue(batchSize?: number): Promise<void>;
+export declare function popBatchFromQueue(batchSize: number | undefined, intervalName: string, intervalBucket: string): Promise<void>;
 //# sourceMappingURL=redisqueue.d.ts.map
