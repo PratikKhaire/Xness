@@ -1,2 +1,2 @@
-export declare function getBinancedata(symbols: string[]): void;
+export {};
 //# sourceMappingURL=binance_ws.d.ts.map

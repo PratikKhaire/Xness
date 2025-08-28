@@ -1,4 +1,4 @@
-import { getBinancedata } from "./binance_ws";
+import { getBinancedata } from "./binanceWs";
 
 const symbols = ["btcusdt", "ethusdt", "bnbusdt"]; 
 

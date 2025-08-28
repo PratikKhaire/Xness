@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const binance_ws_1 = require("./binance_ws");
+const binanceWs_1 = require("./binanceWs");
 const symbols = ["btcusdt", "ethusdt", "bnbusdt"];
-(0, binance_ws_1.getBinancedata)(symbols);
+(0, binanceWs_1.getBinancedata)(symbols);
 //# sourceMappingURL=index.js.map

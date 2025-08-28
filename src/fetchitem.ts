@@ -16,5 +16,5 @@ export async function consumeOueue(params: any) {
   }
 }
 
-// Add this to the bottom of src/fetchitem.ts to run the consumer
+
 consumeOueue({});

@@ -16,6 +16,5 @@ async function consumeOueue(params) {
         }
     }
 }
-// Add this to the bottom of src/fetchitem.ts to run the consumer
 consumeOueue({});
 //# sourceMappingURL=fetchitem.js.map
