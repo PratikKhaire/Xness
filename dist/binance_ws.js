@@ -15,13 +15,16 @@ function getBinancedata(symbols) {
     ws.on("open", () => {
         console.log("Connected to Binance WebSocket");
     });
-    ws.on("message", (data) => {
+    ws.on("message", async (data) => {
         const parsed = JSON.parse(data.toString());
         // For multi-stream, data is in parsed.data
         if (parsed.data && parsed.stream) {
             const symbol = parsed.data.s;
             const price = parsed.data.c;
-            console.log(`Current ${symbol} Price:`, price);
+            const timestamp = parsed.data.E;
+            const queueItem = JSON.stringify({ symbol, price, timestamp });
+            await redisClient.lPush("price_queue", queueItem);
+            console.log(`Queued ${symbol} Price:`, price);
         }
         else {
             // fallback for single stream
