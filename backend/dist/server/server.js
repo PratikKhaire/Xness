@@ -7,8 +7,10 @@ const express_1 = __importDefault(require("express"));
 const uuid_1 = require("uuid");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const db_connection_1 = require("../db/db-connection");
+const cors_1 = __importDefault(require("cors"));
 const app = (0, express_1.default)();
 const port = 4000;
+app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 const users = {};
 app.get("/api/candles", async (req, res) => {
@@ -17,9 +19,9 @@ app.get("/api/candles", async (req, res) => {
         return res.status(400).json({ messae: "Missing query parameters" });
     }
     const pgClient = (0, db_connection_1.getPgClient)({
-        user: "postgress",
+        user: "postgres",
         host: "localhost",
-        database: "postgress",
+        database: "postgres",
         password: "admin@123",
         port: 5432,
     });
@@ -38,7 +40,7 @@ app.get("/api/candles", async (req, res) => {
     AND ts<= to_timestamp($4)
     GROUP BY time_bucket($1,ts)
     ORDER BY timestamp ASC`, [bucket, asset.toUpperCase(), startTime, endTime]);
-        res.json({ candel: result.rows });
+        res.json({ candles: result.rows });
     }
     catch (e) {
         res.status(500).json({ message: "Error fetching candles" });

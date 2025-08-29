@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "cors": "^2.8.5",
+    "lightweight-charts": "^5.0.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19"
+  }
+}

@@ -2,9 +2,12 @@ import express from "express";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcrypt";
 import { getPgClient } from "../db/db-connection";
+import cors from "cors";
 
 const app = express();
 const port = 4000;
+
+app.use(cors());
 
 app.use(express.json());
 
