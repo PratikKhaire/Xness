@@ -1,5 +1,5 @@
 import { createClient } from "redis";
-import { getPgClient } from "./db/db-connection";
+import {  pgClient } from "./db/db-connection";
 import { setupMaterializedView } from "./refreshMaterializedView";
 
 export async function popBatchFromQueue(
@@ -10,13 +10,7 @@ export async function popBatchFromQueue(
   const redisClient = createClient();
   await redisClient.connect();
 
-  const pgClient = getPgClient({
-    user: "postgres",
-    host: "localhost",
-    database: "postgres",
-    password: "admin@123",
-    port: 5432,
-  });
+
 
   await pgClient.connect();
 

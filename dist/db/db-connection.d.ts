@@ -6,4 +6,5 @@ export declare function getPgClient(p0: {
     password: string;
     port: number;
 }): PgClient;
+export declare const pgClient: PgClient;
 //# sourceMappingURL=db-connection.d.ts.map
