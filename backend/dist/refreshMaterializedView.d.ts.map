@@ -1,1 +1,0 @@
-{"version":3,"file":"refreshMaterializedView.d.ts","sourceRoot":"","sources":["../src/refreshMaterializedView.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,IAAI,QAAQ,EAAE,MAAM,IAAI,CAAC;AAExC,wBAAsB,qBAAqB,CACzC,MAAM,EAAE,MAAM,EACd,cAAc,EAAE,MAAM,EACtB,YAAY,EAAE,MAAM,EACpB,QAAQ,EAAE,QAAQ,iBAiBnB"}
