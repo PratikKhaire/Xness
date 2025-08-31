@@ -10,10 +10,10 @@ export function setupWebSocketServer() {
     .then(() => {
       console.log("Connected to Redis for WebSocket subscription");
       redisSubscriber.subscribe("price_updates", (message) => {
-        // Broadcast message to all connected WebSocket clients
+        
         wss.clients.forEach((client) => {
           if (client.readyState === 1) {
-            // WebSocket.OPEN === 1
+            
             client.send(message);
           }
         });
