@@ -15,26 +15,28 @@ export function getBinancedata(symbols: string[]) {
 
   ws.on("message", async (data) => {
     const parsed = JSON.parse(data.toString());
-    
+
     if (parsed.data && parsed.stream) {
       const symbol = parsed.data.s;
       const price = parsed.data.c;
-       const bidPrice = parsed.data.b; // best bid price
-       const askPrice = parsed.data.a; 
+      const bidPrice = parsed.data.b; // best bid price
+      const askPrice = parsed.data.a;
       const timestamp = parsed.data.E;
 
-       const queueItem = JSON.stringify({
-         symbol,
-         bidPrice,
-         askPrice,
-         timestamp,
-       });
+      const queueItem = JSON.stringify({
+        symbol,
+        bidPrice,
+        askPrice,
+        timestamp,
+      });
 
       await redisClient.lPush("price_queue", queueItem);
 
+      // Publish to WebSocket subscribers
+      await redisClient.publish("price_updates", queueItem);
+
       console.log(`Queued ${symbol} Bid: ${bidPrice}, Ask: ${askPrice}`);
     } else {
-  
       console.log(parsed);
     }
   });

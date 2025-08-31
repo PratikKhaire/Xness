@@ -4,6 +4,8 @@ import bcrypt from "bcrypt";
 import { getPgClient } from "../db/db-connection";
 import cors from "cors";
 
+import { setupWebSocketServer } from "../ws/wsconnected";
+
 const app = express();
 const port = 4000;
 
@@ -33,7 +35,22 @@ app.get("/api/candles", async (req , res) =>{
     await pgClient.connect();
 
 try {
-  const bucket = ts === "1m" ? " 1 minute" : ts === "1w" ? "1 week" : ts ==="1d" ? "1 day" :ts;
+   const bucket =
+     ts === "1m"
+       ? "1 minute"
+       : ts === "5m"
+       ? "5 minutes"
+       : ts === "15m"
+       ? "15 minutes"
+       : ts === "1h"
+       ? "1 hour"
+       : ts === "4h"
+       ? "4 hours"
+       : ts === "1d"
+       ? "1 day"
+       : ts === "1w"
+       ? "1 week"
+       : ts;
   const result = await pgClient.query(
     `SELECT extract(epoch from time_bucket($1,ts)) ::bigint as timestamp,
     first(bid,ts) as open,
@@ -78,4 +95,5 @@ app.post("/api/v1/user/signup", async (req, res) => {
 
 app.listen(port, () => {
   console.log(`server running at ${port}`);
+  setupWebSocketServer();
 });
