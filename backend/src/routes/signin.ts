@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
-import { signToken } from "../auth/authectication";
+import { signToken } from "../auth/authentication";
 
 export type UsersStore = {
   [email: string]: { userId: string; passwordHash: string };

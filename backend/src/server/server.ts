@@ -4,6 +4,7 @@ import candlesRouter from "../routes/candles";
 import { setupWebSocketServer } from "../ws/wsconnected";
 import createSigninRouter from "../routes/signin";
 import createSignupRouter from "../routes/signup";
+import { authMiddleware, signToken } from "../auth/authentication";
 
 const app = express();
 const port = 4000;

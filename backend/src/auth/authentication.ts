@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import * as jwt from "jsonwebtoken";
 
-const JWT_SECRET: string = process.env.JWT_SECRET || "dev-secret";
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 
 export type AuthUser = { sub: string; email: string };
 
@@ -13,8 +13,13 @@ declare global {
   }
 }
 
-export function signToken(userId: string, email: string, expiresIn = "7d") {
-  return jwt.sign({ sub: userId, email }, JWT_SECRET, { expiresIn });
+export function signToken(
+  userId: string,
+  email: string,
+) {
+  const payload = { sub: userId, email };
+  const options: jwt.SignOptions = { expiresIn: "7d" };
+  return jwt.sign(payload, JWT_SECRET, options);
 }
 
 export function authMiddleware(
@@ -26,17 +31,15 @@ export function authMiddleware(
   if (!h || !h.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-
   const token = h.slice(7).trim();
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload | string;
+    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload | string;
     if (!decoded || typeof decoded === "string") {
       return res.status(401).json({ message: "Unauthorized" });
     }
-
     req.user = {
-      sub: String(decoded.sub ?? ""),
-      email: String(decoded.email ?? ""),
+      sub: String((decoded as jwt.JwtPayload).sub ?? ""),
+      email: String((decoded as jwt.JwtPayload).email ?? ""),
     };
     return next();
   } catch {
