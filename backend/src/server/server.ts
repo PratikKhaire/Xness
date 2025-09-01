@@ -5,11 +5,8 @@ import createorder from "../routes/createorder";
 import { setupWebSocketServer } from "../ws/wsconnected";
 import createSigninRouter from "../routes/signin";
 import createSignupRouter from "../routes/signup";
-<<<<<<< HEAD
-import { authMiddleware } from "../auth/authentication";
-=======
 import { authMiddleware, signToken } from "../auth/authentication";
->>>>>>> c624799fb0f371d2d181cef973b89704a4c6d990
+import balanceRouter from "../routes/balance";
 
 const app = express();
 const port = 4000;
@@ -31,12 +28,10 @@ app.use(
       (err.type === "entity.parse.failed" || err instanceof SyntaxError) &&
       "body" in err;
     if (isJsonParseError) {
-      return res
-        .status(400)
-        .json({
-          message: "Invalid JSON body",
-          details: String(err.message || err),
-        });
+      return res.status(400).json({
+        message: "Invalid JSON body",
+        details: String(err.message || err),
+      });
     }
     return next(err);
   }
@@ -49,6 +44,8 @@ app.use("/api", createSignupRouter(users));
 app.use("/api", createSigninRouter(users));
 app.use("/api", candlesRouter);
 app.use("/api", authMiddleware, createorder);
+app.use("/api", authMiddleware, balanceRouter);
+app.use("/api", authMiddleware,balanceRouter);
 
 app.listen(port, () => {
   console.log(`server running at ${port}`);
