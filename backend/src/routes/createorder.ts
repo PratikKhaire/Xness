@@ -22,7 +22,7 @@ type Order = {
   fillType: "market";
 };
 
-const ordersByUser: Record<string, Order[]> = {};
+export const ordersByUser: Record<string, Order[]> = {};
 
 const router = Router();
 

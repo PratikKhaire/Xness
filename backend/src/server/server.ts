@@ -5,7 +5,7 @@ import createorder from "../routes/createorder";
 import { setupWebSocketServer } from "../ws/wsconnected";
 import createSigninRouter from "../routes/signin";
 import createSignupRouter from "../routes/signup";
-import { authMiddleware, signToken } from "../redis/auth/authentication";
+import { authMiddleware } from "../auth/authentication";
 
 const app = express();
 const port = 4000;
