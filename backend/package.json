@@ -3,10 +3,17 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsc && node dist/index.js",
-    "server": "ts-node src/server/server.ts",
-    "redis": "npx ts-node src/redisqueue.ts"
+    "build": "tsc",
+    "start:server": "node dist/server/server.js",
+    "start:feed": "node dist/index.js",
+    "start:queue": "node dist/redis/redisqueue.js",
+    "dev:server": "ts-node --esm src/server/server.ts",
+    "dev:feed": "ts-node --esm src/index.ts",
+    "dev:queue": "ts-node --esm src/redis/redisqueue.ts",
+    "server": "npm run dev:server",
+    "redis": "npm run dev:queue",
+    "start": "npm run build && npm-run-all -p start:server start:feed start:queue",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
@@ -24,7 +31,8 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2",
     "uuid": "^11.1.0",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "npm-run-all": "^4.1.5"
   },
   "description": "",
   "devDependencies": {

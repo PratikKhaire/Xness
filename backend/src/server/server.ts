@@ -5,13 +5,38 @@ import createorder from "../routes/createorder";
 import { setupWebSocketServer } from "../ws/wsconnected";
 import createSigninRouter from "../routes/signin";
 import createSignupRouter from "../routes/signup";
-import { authMiddleware, signToken } from "../redis/auth/authentication";
+import { authMiddleware, signToken } from "../auth/authentication";
 
 const app = express();
 const port = 4000;
 
 app.use(cors());
 app.use(express.json());
+
+// Gracefully handle invalid JSON bodies from clients (e.g., Postman)
+app.use(
+  (
+    err: any,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    // body-parser sets type to 'entity.parse.failed' for JSON parse errors
+    const isJsonParseError =
+      err &&
+      (err.type === "entity.parse.failed" || err instanceof SyntaxError) &&
+      "body" in err;
+    if (isJsonParseError) {
+      return res
+        .status(400)
+        .json({
+          message: "Invalid JSON body",
+          details: String(err.message || err),
+        });
+    }
+    return next(err);
+  }
+);
 
 const users: { [email: string]: { userId: string; passwordHash: string } } = {};
 

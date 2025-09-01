@@ -14,6 +14,19 @@ export async function popBatchFromQueue(
 
   await pgClient.connect();
 
+  // Ensure schema exists
+  await pgClient.query(`
+    CREATE TABLE IF NOT EXISTS price (
+      symbol text NOT NULL,
+      bid numeric NOT NULL,
+      ask numeric NOT NULL,
+      ts timestamptz NOT NULL
+    );
+  `);
+  await pgClient.query(
+    `CREATE INDEX IF NOT EXISTS idx_price_symbol_ts ON price(symbol, ts DESC);`
+  );
+
   while (true) {
     const queueLength = await redisClient.lLen("price_queue");
     if (queueLength >= batchSize) {
