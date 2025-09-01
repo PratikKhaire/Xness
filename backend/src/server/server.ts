@@ -5,7 +5,7 @@ import createorder from "../routes/createorder";
 import { setupWebSocketServer } from "../ws/wsconnected";
 import createSigninRouter from "../routes/signin";
 import createSignupRouter from "../routes/signup";
-import { authMiddleware, signToken } from "../auth/authentication";
+import { authMiddleware, signToken } from "../redis/auth/authentication";
 
 const app = express();
 const port = 4000;
@@ -15,12 +15,11 @@ app.use(express.json());
 
 const users: { [email: string]: { userId: string; passwordHash: string } } = {};
 
-// Mount routes
+// routes
 app.use("/api", createSignupRouter(users));
 app.use("/api", createSigninRouter(users));
 app.use("/api", candlesRouter);
 app.use("/api", authMiddleware, createorder);
-
 
 app.listen(port, () => {
   console.log(`server running at ${port}`);

@@ -5,27 +5,40 @@ import { getPgClient } from "../db/db-connection";
 type TradeBody = {
   asset?: string;
   type?: "buy" | "sell";
-  margin?: number; // integer cents with 2 decimals (e.g., 50000 -> $500.00)
-  leverage?: number; // e.g. 1, 2, 5, ...
+  margin?: number;
+  leverage?: number;
 };
+
+type Order = {
+  orderId: string;
+  userId: string;
+  asset: string;
+  type: "buy" | "sell";
+  executedPrice: number;
+  ts: number;
+  margin: number;
+  leverage: number;
+  status: "open" | "filled" | "cancelled" | "closed";
+  fillType: "market";
+};
+
+const ordersByUser: Record<string, Order[]> = {};
 
 const router = Router();
 
-router.post("/v1/trade", async (req, res) => {
-  const { asset, type, margin, leverage = 1 } = req.body as TradeBody;
-
-  const validAsset = typeof asset === "string" && asset.trim().length > 0;
-  const validType = type === "buy" || type === "sell";
+function validateTrade(b: TradeBody) {
+  const validAsset = typeof b.asset === "string" && b.asset.trim().length > 0;
+  const validType = b.type === "buy" || b.type === "sell";
   const validMargin =
-    typeof margin === "number" && Number.isFinite(margin) && margin > 0;
+    typeof b.margin === "number" && Number.isFinite(b.margin) && b.margin > 0;
   const validLeverage =
-    typeof leverage === "number" && Number.isFinite(leverage) && leverage > 0;
+    typeof b.leverage === "number" &&
+    Number.isFinite(b.leverage) &&
+    b.leverage > 0;
+  return validAsset && validType && validMargin && validLeverage;
+}
 
-  if (!validAsset || !validType || !validMargin || !validLeverage) {
-    return res.status(411).json({ message: "Incorrect inputs" });
-  }
-
-  const symbol = asset!.toUpperCase();
+async function getLatestPrice(symbol: string) {
   const pg = getPgClient({
     user: "postgres",
     host: "localhost",
@@ -33,7 +46,6 @@ router.post("/v1/trade", async (req, res) => {
     password: "admin@123",
     port: 5432,
   });
-
   await pg.connect();
   try {
     const { rows } = await pg.query(
@@ -44,46 +56,59 @@ router.post("/v1/trade", async (req, res) => {
         LIMIT 1`,
       [symbol]
     );
-
-    if (rows.length === 0) {
-      return res.status(503).json({ message: "Price unavailable" });
-    }
-
-    const latest = rows[0];
-    const bestBid = Number(latest.bid);
-    const bestAsk = Number(latest.ask);
-    const priceTs = Number(latest.timestamp);
-
-    if (!Number.isFinite(bestBid) || !Number.isFinite(bestAsk)) {
-      return res.status(503).json({ message: "Invalid market price" });
-    }
-
-    const executedPrice = type === "buy" ? bestAsk : bestBid;
-
-    const orderId = uuidv4();
-    const userId = req.user?.sub ?? "unknown";
-
-    // TODO: persist order to DB if needed
-    const order = {
-      orderId,
-      userId,
-      asset: symbol,
-      type,
-      executedPrice,
-      ts: priceTs,
-      margin,
-      leverage,
-      status: "filled",
-      fillType: "market",
+    if (rows.length === 0) return null;
+    const r = rows[0];
+    return {
+      bid: Number(r.bid),
+      ask: Number(r.ask),
+      ts: Number(r.timestamp),
     };
-
-    return res.status(200).json(order);
-  } catch (e) {
-    console.error("Failed to place order:", e);
-    return res.status(500).json({ message: "Failed to place order" });
   } finally {
     await pg.end();
   }
+}
+
+// POST /api/v1/trade (auth applied in server.ts)
+router.post("/v1/trade", async (req, res) => {
+  const body = req.body as TradeBody;
+  const leverage = body.leverage ?? 1;
+
+  const valid = validateTrade({ ...body, leverage });
+  if (!valid) return res.status(411).json({ message: "Incorrect inputs" });
+
+  const symbol = body.asset!.toUpperCase();
+  const last = await getLatestPrice(symbol);
+  if (!last || !Number.isFinite(last.bid) || !Number.isFinite(last.ask)) {
+    return res.status(503).json({ message: "Price unavailable" });
+  }
+
+  const executedPrice = body.type === "buy" ? last.ask : last.bid;
+  const userId = req.user?.sub ?? "unknown";
+  const order: Order = {
+    orderId: uuidv4(),
+    userId,
+    asset: symbol,
+    type: body.type!,
+    executedPrice,
+    ts: last.ts,
+    margin: body.margin!,
+    leverage,
+    status: "open",
+    fillType: "market",
+  };
+
+  if (!ordersByUser[userId]) ordersByUser[userId] = [];
+  ordersByUser[userId].push(order);
+
+  return res.status(200).json(order);
+});
+
+router.get("/v1/trades/open", (req, res) => {
+  const userId = req.user?.sub ?? "unknown";
+  const openOrders = (ordersByUser[userId] || []).filter(
+    (o) => o.status === "open"
+  );
+  return res.status(200).json({ orders: openOrders });
 });
 
 export default router;
