@@ -37,22 +37,28 @@ router.get("/v1/candles", async (req, res) => {
         ? "1 week"
         : ts;
     const result = await pgClient.query(
-      `WITH cte AS (
-         SELECT time_bucket($1, ts) AS bucket,
-                first(bid, ts) AS open,
-                last(bid, ts)  AS close,
-                max(bid)       AS high,
-                min(bid)       AS low,
-                max(decimals)  AS decimals
+      `WITH base AS (
+         SELECT time_bucket($1, ts) AS bucket, ts, bid, decimals
            FROM price
           WHERE symbol = $2
             AND ts >= to_timestamp($3)
             AND ts <= to_timestamp($4)
-          GROUP BY bucket
+      ),
+      agg AS (
+        SELECT bucket,
+               first_value(bid) OVER (PARTITION BY bucket ORDER BY ts ASC)  AS open,
+               first_value(bid) OVER (PARTITION BY bucket ORDER BY ts DESC) AS close,
+               max(bid) AS high,
+               min(bid) AS low,
+               max(decimals) AS decimals
+          FROM base
       )
       SELECT extract(epoch from bucket)::bigint as timestamp,
              open, high, low, close, decimals
-        FROM cte
+        FROM (
+          SELECT DISTINCT ON (bucket) bucket, open, high, low, close, decimals
+            FROM agg
+        ) d
         ORDER BY timestamp ASC`,
       [bucket, (asset as string).toUpperCase(), startTime, endTime]
     );

@@ -108,7 +108,7 @@ export default function createCloseRouter(balances: BalancesStore) {
 
     const closed: ClosedTrade = {
       orderId: order.orderId,
-  asset: order.asset,
+      asset: order.asset,
       type: order.type,
       margin: order.margin,
       leverage: order.leverage,

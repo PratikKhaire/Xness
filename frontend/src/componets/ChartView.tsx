@@ -20,32 +20,32 @@ export default function ChartView({
     const [currentAsset] = useState(asset);
 
     const { realtimeData } = useWebSocket('ws://localhost:4001', currentAsset);
-    const { containerRef, spreadSeriesRef } = useChartData({
+    const { containerRef, spreadSeriesRef, livePriceSeriesRef } = useChartData({
         currentAsset,
         currentInterval,
         backendUrl,
         rangeDays,
     });
 
-    useRealtimeData({ realtimeData, spreadSeriesRef });
+    useRealtimeData({ realtimeData, spreadSeriesRef, livePriceSeriesRef });
 
     const intervals = ['1m', '5m', '15m', '1h', '4h', '1d', '1w'] as const;
 
     return (
         <div style={{ width: '100%', minHeight: 420, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '10px', background: '#1E222D', color: '#E6E8EB' }}>
-                <h2>{currentAsset}</h2>
-                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+            <div style={{ padding: '16px 20px', background: 'linear-gradient(90deg, #0F172A 0%, #1E293B 100%)', color: '#E6E8EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h2 style={{ margin: 0, letterSpacing: 0.5 }}>{currentAsset}</h2>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                     {intervals.map((int) => (
                         <button
                             key={int}
                             onClick={() => setCurrentInterval(int)}
                             style={{
-                                padding: '5px 10px',
-                                background: currentInterval === int ? '#5B8CFF' : '#2A2E39',
+                                padding: '6px 12px',
+                                background: currentInterval === int ? '#5B8CFF' : 'rgba(255,255,255,0.06)',
                                 color: '#E6E8EB',
-                                border: 'none',
-                                borderRadius: '4px',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                borderRadius: '6px',
                                 cursor: 'pointer',
                             }}
                         >

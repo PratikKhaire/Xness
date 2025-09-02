@@ -3,11 +3,13 @@ import { useEffect, useRef } from "react";
 interface RealtimeDataProps {
   realtimeData: any[];
   spreadSeriesRef: React.MutableRefObject<any>;
+  livePriceSeriesRef?: React.MutableRefObject<any>;
 }
 
 export function useRealtimeData({
   realtimeData,
   spreadSeriesRef,
+  livePriceSeriesRef,
 }: RealtimeDataProps) {
   const processedTimestampsRef = useRef<Set<number>>(new Set());
 
@@ -40,6 +42,19 @@ export function useRealtimeData({
           });
 
         spreadSeriesRef.current.setData(combinedData);
+
+        // Update live price line with last tick's price if available
+        if (livePriceSeriesRef?.current) {
+          const last = realtimeData[realtimeData.length - 1];
+          if (last) {
+            const t = Math.floor(Number(last.timestamp) / 1000);
+            const p = Number(last.price || last.askPrice || last.bidPrice);
+            if (Number.isFinite(t) && Number.isFinite(p)) {
+              // assume spot mid price is float
+              livePriceSeriesRef.current.update({ time: t as any, value: p });
+            }
+          }
+        }
 
         // Keep only recent timestamps to prevent memory leaks
         if (processedTimestampsRef.current.size > 1000) {

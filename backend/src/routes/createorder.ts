@@ -69,7 +69,7 @@ async function getLatestPrice(symbol: string) {
   await pg.connect();
   try {
     const { rows } = await pg.query(
-  `SELECT bid, ask, decimals, extract(epoch from ts)::bigint as timestamp
+      `SELECT bid, ask, decimals, extract(epoch from ts)::bigint as timestamp
          FROM price
         WHERE symbol = $1
         ORDER BY ts DESC
@@ -79,9 +79,9 @@ async function getLatestPrice(symbol: string) {
     if (rows.length === 0) return null;
     const r = rows[0];
     return {
-  bid: Number(r.bid), // integer stored
-  ask: Number(r.ask), // integer stored
-  decimals: Number(r.decimals) || 4,
+      bid: Number(r.bid), // integer stored
+      ask: Number(r.ask), // integer stored
+      decimals: Number(r.decimals) || 4,
       ts: Number(r.timestamp),
     };
   } finally {
@@ -182,7 +182,7 @@ export default function createTradeRouter(balances: BalancesStore) {
     // Map to spec-like shape
     const trades = openOrders.map((o) => ({
       orderId: o.orderId,
-  asset: shortFromSymbol(o.asset),
+      asset: shortFromSymbol(o.asset),
       type: o.type,
       openPrice: o.openPrice,
       decimals: o.decimals,

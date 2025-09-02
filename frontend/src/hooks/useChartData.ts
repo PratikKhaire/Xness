@@ -23,6 +23,7 @@ export function useChartData({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
   const spreadSeriesRef = useRef<any>(null);
+  const livePriceSeriesRef = useRef<any>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -37,7 +38,7 @@ export function useChartData({
       chartRef.current = null;
     }
 
-  const chart = createChart(container, {
+    const chart = createChart(container, {
       width: getWidth(),
       height: Math.max(420, Math.round(window.innerHeight * 0.75)),
       layout: {
@@ -72,14 +73,14 @@ export function useChartData({
     });
     chartRef.current = chart;
 
-  const areaSeries = chart.addSeries(AreaSeries, {
+    const areaSeries = chart.addSeries(AreaSeries, {
       lineColor: "#5B8CFF",
       topColor: "rgba(91, 140, 255, 0.25)",
       bottomColor: "rgba(91, 140, 255, 0.05)",
       priceLineVisible: false,
     });
 
-  const candleSeries = chart.addSeries(CandlestickSeries, {
+    const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: "#22C55E",
       downColor: "#EF4444",
       borderUpColor: "#22C55E",
@@ -88,12 +89,19 @@ export function useChartData({
       wickDownColor: "#EF4444",
     });
 
-  const spreadSeries = chart.addSeries(LineSeries, {
+    const spreadSeries = chart.addSeries(LineSeries, {
       color: "#FF6B6B",
       lineWidth: 2,
       title: "Bid-Ask Spread",
     });
     spreadSeriesRef.current = spreadSeries;
+
+    const liveLine = chart.addSeries(LineSeries, {
+      color: "#FACC15",
+      lineWidth: 2,
+      title: "Live",
+    });
+    livePriceSeriesRef.current = liveLine;
 
     const end = Math.floor(Date.now() / 1000);
     const start = end - rangeDays * 24 * 60 * 60;
@@ -122,7 +130,7 @@ export function useChartData({
           }>;
         };
 
-  const rows = (payload.candles ?? [])
+        const rows = (payload.candles ?? [])
           .map((c) => ({
             timeSec: Number(c.timestamp),
             open: Number(c.open),
@@ -187,5 +195,5 @@ export function useChartData({
     };
   }, [currentAsset, currentInterval, backendUrl, rangeDays]);
 
-  return { containerRef, chartRef, spreadSeriesRef };
+  return { containerRef, chartRef, spreadSeriesRef, livePriceSeriesRef };
 }
