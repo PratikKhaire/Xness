@@ -10,6 +10,7 @@
     "dev:server": "ts-node --esm src/server/server.ts",
     "dev:feed": "ts-node --esm src/index.ts",
     "dev:queue": "ts-node --esm src/redis/redisqueue.ts",
+    "dev:smoke": "ts-node --esm src/scripts/smokeTrade.ts",
     "server": "npm run dev:server",
     "redis": "npm run dev:queue",
     "start": "npm run build && npm-run-all -p start:server start:feed start:queue",

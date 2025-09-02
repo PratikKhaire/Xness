@@ -1,12 +1,14 @@
 import express from "express";
 import cors from "cors";
 import candlesRouter from "../routes/candles";
-import createorder from "../routes/createorder";
+import createTradeRouter from "../routes/createorder";
 import { setupWebSocketServer } from "../ws/wsconnected";
 import createSigninRouter from "../routes/signin";
 import createSignupRouter from "../routes/signup";
-import { authMiddleware, signToken } from "../auth/authentication";
-import balanceRouter from "../routes/balance";
+import { authMiddleware } from "../auth/authentication";
+import createBalanceRouter, { BalancesStore } from "../routes/balance";
+import assetsRouter from "../routes/assets";
+import createCloseRouter from "../routes/closeOrder";
 
 const app = express();
 const port = 4000;
@@ -22,7 +24,6 @@ app.use(
     res: express.Response,
     next: express.NextFunction
   ) => {
-    // body-parser sets type to 'entity.parse.failed' for JSON parse errors
     const isJsonParseError =
       err &&
       (err.type === "entity.parse.failed" || err instanceof SyntaxError) &&
@@ -38,14 +39,22 @@ app.use(
 );
 
 const users: { [email: string]: { userId: string; passwordHash: string } } = {};
+const balances: BalancesStore = {};
 
 // routes
-app.use("/api", createSignupRouter(users));
+app.use(
+  "/api",
+  createSignupRouter(users, (userId) => {
+    // initial balance = 5000.00 (2 decimals)
+    balances[userId] = 5000 * 100;
+  })
+);
 app.use("/api", createSigninRouter(users));
 app.use("/api", candlesRouter);
-app.use("/api", authMiddleware, createorder);
-app.use("/api", authMiddleware, balanceRouter);
-app.use("/api", authMiddleware,balanceRouter);
+app.use("/api", assetsRouter);
+app.use("/api", authMiddleware, createTradeRouter(balances));
+app.use("/api", authMiddleware, createBalanceRouter(balances));
+app.use("/api", authMiddleware, createCloseRouter(balances));
 
 app.listen(port, () => {
   console.log(`server running at ${port}`);

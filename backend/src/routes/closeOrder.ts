@@ -1,100 +1,168 @@
 import { Router } from "express";
-import { getPgClient, pgClient } from "../db/db-connection";
+import { getPgClient } from "../db/db-connection";
 import { ordersByUser } from "./createorder";
-import { closeSync } from "fs";
+import type { BalancesStore } from "./balance";
+import { getPublisher } from "../ws/publisher";
 
-type CloseBody = { orderId?:string};
+type CloseBody = { orderId?: string };
 
 type ClosedTrade = {
-    orderId:string;
-    type:'buy'| 'sell';
-    margin : number;
-    leverage: number;
-    openPrice:number;
-    closePrice:number;
-    pnl:number;
+  orderId: string;
+  asset: string;
+  type: "buy" | "sell";
+  margin: number; // integer cents
+  leverage: number;
+  openPrice: number; // int, 4 decimals
+  closePrice: number; // int, 4 decimals
+  decimals: number; // always 4
+  ts: number; // close timestamp (from price row)
+  pnl: number; // integer cents
 };
 
-const closedTradesByUser : Record<string, ClosedTrade[]>={};
-const router = Router();
+export const closedTradesByUser: Record<string, ClosedTrade[]> = {};
 
-async function getLatestPrice (symbol:string){
-    await pgClient.connect();
-    try{
-        const {rows} = await pgClient.query(
-      `SELECT bid, ask, extract(epoch from ts)::bigint as timestamp
-         FROM price
-        WHERE symbol = $1
-        ORDER BY ts DESC
-        LIMIT 1`,
-      [symbol]
-    );
-    if(rows.length ===0) return null;
-    return {
-        bid:Number(rows[0].bid),
-        ask:Number(rows[0].ask),
-        ts:Number(rows[0].timestamp),
-    };
-
-    }
-    finally{
-        await pgClient.end();
-    }
+function shortFromSymbol(sym: string): "BTC" | "ETH" | "BNB" | string {
+  if (sym === "BTCUSDT") return "BTC";
+  if (sym === "ETHUSDT") return "ETH";
+  if (sym === "BNBUSDT") return "BNB";
+  return sym;
 }
 
-// close trader 
-router.post("/v1/trade/close", async ( req , res) => {
+async function getLatestPrice(symbol: string) {
+  const pg = getPgClient({
+    user: "postgres",
+    host: "localhost",
+    database: "postgres",
+    password: "admin@123",
+    port: 5432,
+  });
+  await pg.connect();
+  try {
+    const { rows } = await pg.query(
+      `SELECT bid, ask, decimals, extract(epoch from ts)::bigint as timestamp
+                 FROM price
+                WHERE symbol = $1
+                ORDER BY ts DESC
+                LIMIT 1`,
+      [symbol]
+    );
+    if (rows.length === 0) return null;
+    return {
+      bid: Number(rows[0].bid), // integers
+      ask: Number(rows[0].ask),
+      decimals: Number(rows[0].decimals) || 4,
+      ts: Number(rows[0].timestamp),
+    };
+  } finally {
+    await pg.end();
+  }
+}
+
+export default function createCloseRouter(balances: BalancesStore) {
+  const router = Router();
+
+  // Close trade
+  router.post("/v1/trade/close", async (req, res) => {
     const userId = req.user?.sub ?? "unknown";
-    const { orderId} = req.body as CloseBody;
+    const { orderId } = req.body as CloseBody;
 
-    if(!orderId || typeof orderId !== "string"){
-        return res.status(411).json({ mesage:'Incorrect inputs'});
+    if (!orderId || typeof orderId !== "string") {
+      return res.status(411).json({ mesage: "Incorrect inputs" });
     }
-     const userOrders = ordersByUser[userId] || [];
-     const order = userOrders.find( o => o.orderId  && o.status ==="open");
-     if(!order){
-        return res.status(404).json({message:'Order not found or not open'});
-     }
 
-     const last = await getLatestPrice(order.asset);
-     if(!last || !Number.isFinite(last.bid) || !Number.isFinite(last.ask)){
-        return res.status(503).json({message:"price unavailable"});
-     }
+    const userOrders = ordersByUser[userId] || [];
+    const order = userOrders.find(
+      (o) => o.orderId === orderId && o.status === "open"
+    );
+    if (!order) {
+      return res.status(404).json({ message: "Order not found or not open" });
+    }
 
-     const closePriceFloat = order.type ==="buy"? last.bid: last.ask;
-     const openPriceFloat = order.executedPrice;
+    const last = await getLatestPrice(order.asset);
+    if (!last || !Number.isFinite(last.bid) || !Number.isFinite(last.ask)) {
+      return res.status(503).json({ message: "Price unavailable" });
+    }
 
-     const exposureUSD= ( order.margin/100) * order.leverage;
-     const qty = exposureUSD / openPriceFloat;
+    // Normalize to 4 decimals and apply 0.5% spread on close (unfavorable)
+    const targetDecimals = 4;
+    const adj = Math.pow(10, targetDecimals - (last.decimals ?? 4));
+    const askInt = Math.round(last.ask * adj);
+    const bidInt = Math.round(last.bid * adj);
+    const closePrice =
+      order.type === "buy"
+        ? Math.round((bidInt * 995) / 1000)
+        : Math.round((askInt * 1005) / 1000);
 
-     const pnlUSD = ( order.type === "buy") ? ( closePriceFloat - openPriceFloat)* qty :(openPriceFloat-closePriceFloat)*qty;
+    // Convert openPrice back to float for qty calc
+    const openPriceFloat = order.openPrice / 10000;
 
-     const closed : ClosedTrade = {
-        orderId : order.orderId,
-        type:order.type,
-        margin:order.margin,
-        leverage:order.leverage,
+    const exposureUSD = (order.margin / 100) * order.leverage; // dollars
+    const qty = exposureUSD / openPriceFloat;
 
-        openPrice:Math.round(openPriceFloat * 10000),
-        closePrice:Math.round(closePriceFloat * 10000),
-        pnl:Math.round(pnlUSD * 100),
+    const closePriceFloat = closePrice / 10000;
+    const pnlUSD =
+      order.type === "buy"
+        ? (closePriceFloat - openPriceFloat) * qty
+        : (openPriceFloat - closePriceFloat) * qty;
+    const pnlCents = Math.round(pnlUSD * 100);
 
-     };
+    const closed: ClosedTrade = {
+      orderId: order.orderId,
+  asset: order.asset,
+      type: order.type,
+      margin: order.margin,
+      leverage: order.leverage,
+      openPrice: order.openPrice,
+      closePrice,
+      decimals: 4,
+      ts: last.ts,
+      pnl: pnlCents,
+    };
 
-     order.status = "closed";
+    order.status = "closed";
 
-     if(!closedTradesByUser[userId]) closedTradesByUser[userId] = [];
-     closedTradesByUser[userId].push(closed);
+    if (!closedTradesByUser[userId]) closedTradesByUser[userId] = [];
+    closedTradesByUser[userId].push(closed);
 
-     return res.status(200).json(closed);
+    // Release margin and apply PnL to user's balance
+    const current = balances[userId] ?? 0;
+    balances[userId] = current + order.margin + pnlCents;
 
+    // Publish close event
+    try {
+      const pub = await getPublisher();
+      await pub.publish(
+        "trade_events",
+        JSON.stringify({
+          type: "trade_close",
+          userId,
+          orderId: order.orderId,
+          asset: order.asset,
+          side: order.type,
+          openPrice: order.openPrice,
+          closePrice: closePrice,
+          decimals: 4,
+          leverage: order.leverage,
+          margin: order.margin,
+          ts: last.ts,
+          pnl: pnlCents,
+        })
+      );
+    } catch (e) {
+      console.error("Failed to publish trade close event:", e);
+    }
 
-});
+    return res.status(200).json(closed);
+  });
 
-router.get('/v1/trades', ( req,res) => {
-    const userId = req.user?.sub ?? 'unknown';
-    const trades = closedTradesByUser[userId] || [];
-    return res.status(200).json({trades});
-});
+  router.get("/v1/trades", (req, res) => {
+    const userId = req.user?.sub ?? "unknown";
+    const trades = (closedTradesByUser[userId] || []).map((t) => ({
+      ...t,
+      asset: shortFromSymbol(t.asset),
+    }));
+    return res.status(200).json({ trades });
+  });
 
-export default router;
+  return router;
+}

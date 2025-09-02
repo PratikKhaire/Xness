@@ -9,11 +9,19 @@ export function setupWebSocketServer() {
     .connect()
     .then(() => {
       console.log("Connected to Redis for WebSocket subscription");
+      // Subscribe to price updates (legacy)
       redisSubscriber.subscribe("price_updates", (message) => {
-        
         wss.clients.forEach((client) => {
           if (client.readyState === 1) {
-            
+            client.send(message);
+          }
+        });
+      });
+
+      // Subscribe to internal trade events and broadcast to clients
+      redisSubscriber.subscribe("trade_events", (message) => {
+        wss.clients.forEach((client) => {
+          if (client.readyState === 1) {
             client.send(message);
           }
         });

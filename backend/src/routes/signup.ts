@@ -6,7 +6,12 @@ export type UsersStore = {
   [email: string]: { userId: string; passwordHash: string };
 };
 
-export default function createSignupRouter(users: UsersStore) {
+export type OnUserCreated = (userId: string, email: string) => void;
+
+export default function createSignupRouter(
+  users: UsersStore,
+  onCreated?: OnUserCreated
+) {
   const router = Router();
 
   router.post("/v1/user/signup", async (req, res) => {
@@ -25,6 +30,9 @@ export default function createSignupRouter(users: UsersStore) {
       const userId = uuidv4();
       const passwordHash = await bcrypt.hash(password, 10);
       users[email] = { userId, passwordHash };
+      try {
+        onCreated?.(userId, email);
+      } catch {}
       return res.status(200).json({ userId });
     } catch {
       return res.status(403).json({ message: "Erro while signing up" });

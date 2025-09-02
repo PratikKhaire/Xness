@@ -49,30 +49,40 @@ router.get("/v1/assets", async (_req, res) => {
   try {
     // Latest row per symbol
     const { rows } = await pg.query(
-      `SELECT DISTINCT ON (symbol) symbol, bid, ask
+      `SELECT DISTINCT ON (symbol) symbol, bid, ask, decimals
          FROM price
         WHERE symbol = ANY($1)
         ORDER BY symbol, ts DESC`,
       [symbols]
     );
 
-    const latestBySymbol = new Map<string, { bid: number; ask: number }>();
+    const latestBySymbol = new Map<
+      string,
+      { bid: number; ask: number; decimals: number }
+    >();
     for (const r of rows) {
       latestBySymbol.set(String(r.symbol), {
         bid: Number(r.bid),
         ask: Number(r.ask),
+        decimals: Number(r.decimals) || DECIMALS,
       });
     }
 
     const assets = ASSETS.map((cfg) => {
       const p = latestBySymbol.get(cfg.dbSymbol);
-      const buy = p?.ask ?? 0; // buy at ask
-      const sell = p?.bid ?? 0; // sell at bid
+      const srcDecimals = p?.decimals ?? DECIMALS;
+      const scaleAdj = Math.pow(10, DECIMALS - srcDecimals);
+      const askInt = Math.round((p?.ask ?? 0) * scaleAdj);
+      const bidInt = Math.round((p?.bid ?? 0) * scaleAdj);
+
+      // 1% spread on integers (multiply then divide to avoid rounding loss)
+      const buy = Math.round(askInt * 1.01);
+      const sell = Math.round(bidInt * 0.99);
       return {
         name: cfg.name,
         symbol: cfg.symbol,
-        buyPrice: Math.round(buy * SCALE), // integers; decimals=4
-        sellPrice: Math.round(sell * SCALE), // integers; decimals=4
+        buyPrice: buy, // integers; decimals=4
+        sellPrice: sell, // integers; decimals=4
         decimals: DECIMALS,
         imageUrl: cfg.imageUrl,
       };
@@ -80,12 +90,10 @@ router.get("/v1/assets", async (_req, res) => {
 
     return res.status(200).json({ assets });
   } catch (e: any) {
-    return res
-      .status(500)
-      .json({
-        message: "Failed to load assets",
-        error: String(e?.message || e),
-      });
+    return res.status(500).json({
+      message: "Failed to load assets",
+      error: String(e?.message || e),
+    });
   } finally {
     await pg.end();
   }
