@@ -1,12 +1,8 @@
-import ChartView from './componets/ChartView'
 import './App.css';
+import Dashboard from './components/Dashboard';
 
 const App = () => {
-  return (
-    <div style={{ marginTop: 12 }}>
-      <ChartView asset="BTCUSDT" interval="1d" rangeDays={14} />
-    </div>
-  );
+  return <Dashboard />;
 };
 
-export default App
+export default App;
