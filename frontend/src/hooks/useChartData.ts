@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
 import {
   createChart,
+  CrosshairMode,
   AreaSeries,
   CandlestickSeries,
   LineSeries,
-  CrosshairMode,
 } from "lightweight-charts";
 
 interface ChartData {
@@ -37,7 +37,7 @@ export function useChartData({
       chartRef.current = null;
     }
 
-    const chart = createChart(container, {
+  const chart = createChart(container, {
       width: getWidth(),
       height: Math.max(420, Math.round(window.innerHeight * 0.75)),
       layout: {
@@ -72,14 +72,14 @@ export function useChartData({
     });
     chartRef.current = chart;
 
-    const areaSeries = chart.addSeries(AreaSeries, {
+  const areaSeries = chart.addSeries(AreaSeries, {
       lineColor: "#5B8CFF",
       topColor: "rgba(91, 140, 255, 0.25)",
       bottomColor: "rgba(91, 140, 255, 0.05)",
       priceLineVisible: false,
     });
 
-    const candleSeries = chart.addSeries(CandlestickSeries, {
+  const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: "#22C55E",
       downColor: "#EF4444",
       borderUpColor: "#22C55E",
@@ -88,7 +88,7 @@ export function useChartData({
       wickDownColor: "#EF4444",
     });
 
-    const spreadSeries = chart.addSeries(LineSeries, {
+  const spreadSeries = chart.addSeries(LineSeries, {
       color: "#FF6B6B",
       lineWidth: 2,
       title: "Bid-Ask Spread",
@@ -122,7 +122,7 @@ export function useChartData({
           }>;
         };
 
-        const rows = (payload.candles ?? [])
+  const rows = (payload.candles ?? [])
           .map((c) => ({
             timeSec: Number(c.timestamp),
             open: Number(c.open),
@@ -145,24 +145,19 @@ export function useChartData({
           return;
         }
 
-        const toTime = (t: number) => {
-          if (currentInterval === "1d" || currentInterval === "1w") {
-            return new Date(t * 1000).toISOString().slice(0, 10);
-          }
-          return t;
-        };
-
+        // Data from backend is integers with 4 decimals. Scale to floats for chart rendering.
+        const scale = 1e4;
         const ohlc = rows.map((r) => ({
-          time: toTime(r.timeSec) as any,
-          open: r.open,
-          high: r.high,
-          low: r.low,
-          close: r.close,
+          time: r.timeSec as any,
+          open: r.open / scale,
+          high: r.high / scale,
+          low: r.low / scale,
+          close: r.close / scale,
         }));
 
         const line = rows.map((r) => ({
-          time: toTime(r.timeSec) as any,
-          value: r.close,
+          time: r.timeSec as any,
+          value: r.close / scale,
         }));
 
         candleSeries.setData(ohlc);

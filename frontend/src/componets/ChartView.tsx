@@ -17,7 +17,7 @@ export default function ChartView({
     rangeDays = 14,
 }: Props) {
     const [currentInterval, setCurrentInterval] = useState(interval);
-    const [currentAsset, setCurrentAsset] = useState(asset);
+    const [currentAsset] = useState(asset);
 
     const { realtimeData } = useWebSocket('ws://localhost:4001', currentAsset);
     const { containerRef, spreadSeriesRef } = useChartData({
@@ -32,7 +32,7 @@ export default function ChartView({
     const intervals = ['1m', '5m', '15m', '1h', '4h', '1d', '1w'] as const;
 
     return (
-        <div style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: '100%', minHeight: 420, display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '10px', background: '#1E222D', color: '#E6E8EB' }}>
                 <h2>{currentAsset}</h2>
                 <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
@@ -54,11 +54,7 @@ export default function ChartView({
                     ))}
                 </div>
             </div>
-            <div
-                ref={containerRef}
-                className="chart-shell"
-                style={{ flex: 1, width: '100%' }}
-            />
+            <div ref={containerRef} className="chart-shell" style={{ flex: 1, width: '100%', minHeight: 360 }} />
         </div>
     );
 }

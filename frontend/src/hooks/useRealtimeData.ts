@@ -24,7 +24,8 @@ export function useRealtimeData({
         })
         .map((item) => ({
           time: Math.floor(item.timestamp / 1000) as any,
-          value: parseFloat(item.askPrice) - parseFloat(item.bidPrice),
+          // scale spread to float (data published is float mid for both sides; if later updated to ints, adjust here)
+          value: Number(item.askPrice) - Number(item.bidPrice),
         }))
         .sort((a, b) => a.time - b.time);
 
